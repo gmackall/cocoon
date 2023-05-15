@@ -34,6 +34,20 @@ const Set<String> kNeedsCheckLabelsAndTests = <String>{
   'flutter/plugins',
 };
 
+// Set of language code extensions for which we check if a change only affects
+// comments.
+const Set<String> kRecognizedCommentCodeExtensions = <String>{
+  'cc',
+  'cpp',
+  'dart',
+  'java',
+  'kt',
+  'm',
+  'mm',
+  'swift',
+  'gradle',
+};
+
 final RegExp kEngineTestRegExp = RegExp(r'(tests?|benchmarks?)\.(dart|java|mm|m|cc|sh)$');
 final List<String> kNeedsTestsLabels = <String>['needs tests'];
 
@@ -660,20 +674,9 @@ class GithubWebhookSubscription extends SubscriptionHandler {
       return false;
     }
 
-    // Ensure that the file is a language reconized by the check below.
-    const Set<String> codeExtensions = <String>{
-      'cc',
-      'cpp',
-      'dart',
-      'java',
-      'kt',
-      'm',
-      'mm',
-      'swift',
-    };
     final String filename = file.filename!;
     final String? extension = filename.contains('.') ? filename.split('.').last.toLowerCase() : null;
-    if (extension == null || !codeExtensions.contains(extension)) {
+    if (extension == null || !kRecognizedCommentCodeExtensions.contains(extension)) {
       return false;
     }
 

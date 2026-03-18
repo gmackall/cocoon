@@ -61,13 +61,17 @@ final class RerunFailedJob extends ApiRequestHandler {
       throw NotFoundException('No PresubmitGuard found for PR $slug/$prNumber');
     }
 
-    final pullRequest = await _scheduler.findPullRequestCachedForPullRequestNum(
-      slug,
-      prNumber,
-    );
-
-    if (pullRequest == null) {
-      throw NotFoundException('No pull request found for PR $slug/$prNumber');
+    final PullRequest pullRequest;
+    try {
+      pullRequest = await PrCheckRuns.findPullRequestFor(
+        _firestore,
+        guard.checkRunId,
+        Config.kMergeQueueLockName,
+      );
+    } catch (e) {
+      throw NotFoundException(
+        'No pull request found for ${Config.kMergeQueueLockName} with ${guard.checkRunId} id',
+      );
     }
 
     final rerunInfo = await UnifiedCheckRun.reInitializeFailedJob(
@@ -95,8 +99,10 @@ final class RerunFailedJob extends ApiRequestHandler {
           throw BadRequestException('Target $buildName not found in .ci.yaml'),
     );
 
-    await _luciBuildService.scheduleTryBuilds(
-      targets: [target],
+    final retries = rerunInfo.checkRetries[buildName]!;
+
+    await _luciBuildService.reScheduleTryBuilds(
+      targets: {target: retries},
       pullRequest: pullRequest,
       engineArtifacts: artifacts,
       checkRunGuard: rerunInfo.checkRunGuard,

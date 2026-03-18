@@ -62,8 +62,15 @@ void main() {
     );
     firestore.putDocument(guard);
 
-    final pullRequest = generatePullRequest();
+    final pullRequest = generatePullRequest(headSha: guard.commitSha);
     scheduler.pullRequest = pullRequest;
+    await PrCheckRuns.initializeDocument(
+      firestoreService: firestore,
+      pullRequest: pullRequest,
+      checks: [
+        generateCheckRun(guard.checkRunId, name: Config.kMergeQueueLockName),
+      ],
+    );
 
     final failedCheck = PresubmitCheck(
       slug: Config.flutterSlug,
@@ -84,7 +91,7 @@ void main() {
     );
 
     when(
-      mockLuciBuildService.scheduleTryBuilds(
+      mockLuciBuildService.reScheduleTryBuilds(
         targets: anyNamed('targets'),
         pullRequest: anyNamed('pullRequest'),
         engineArtifacts: anyNamed('engineArtifacts'),
@@ -103,8 +110,8 @@ void main() {
     expect(response.statusCode, HttpStatus.ok);
 
     verify(
-      mockLuciBuildService.scheduleTryBuilds(
-        targets: argThat(contains(targetA), named: 'targets'),
+      mockLuciBuildService.reScheduleTryBuilds(
+        targets: argThat(containsPair(targetA, 2), named: 'targets'),
         pullRequest: anyNamed('pullRequest'),
         engineArtifacts: anyNamed('engineArtifacts'),
         checkRunGuard: anyNamed('checkRunGuard'),
@@ -127,8 +134,15 @@ void main() {
     );
     firestore.putDocument(guard);
 
-    final pullRequest = generatePullRequest();
+    final pullRequest = generatePullRequest(headSha: guard.commitSha);
     scheduler.pullRequest = pullRequest;
+    await PrCheckRuns.initializeDocument(
+      firestoreService: firestore,
+      pullRequest: pullRequest,
+      checks: [
+        generateCheckRun(guard.checkRunId, name: Config.kMergeQueueLockName),
+      ],
+    );
 
     final failedCheck = PresubmitCheck(
       slug: Config.flutterSlug,
@@ -148,7 +162,7 @@ void main() {
     );
 
     when(
-      mockLuciBuildService.scheduleTryBuilds(
+      mockLuciBuildService.reScheduleTryBuilds(
         targets: anyNamed('targets'),
         pullRequest: anyNamed('pullRequest'),
         engineArtifacts: anyNamed('engineArtifacts'),
@@ -171,8 +185,15 @@ void main() {
     );
     firestore.putDocument(guard);
 
-    final pullRequest = generatePullRequest();
+    final pullRequest = generatePullRequest(headSha: guard.commitSha);
     scheduler.pullRequest = pullRequest;
+    await PrCheckRuns.initializeDocument(
+      firestoreService: firestore,
+      pullRequest: pullRequest,
+      checks: [
+        generateCheckRun(guard.checkRunId, name: Config.kMergeQueueLockName),
+      ],
+    );
 
     tester.requestData = {
       'owner': 'flutter',
@@ -203,12 +224,6 @@ class TestScheduler extends FakeScheduler {
     RepositorySlug slug,
     String headSha,
     int checkSuiteId,
-  ) async => pullRequest;
-
-  @override
-  Future<PullRequest?> findPullRequestCachedForPullRequestNum(
-    RepositorySlug slug,
-    int pullRequestNum,
   ) async => pullRequest;
 
   List<Target>? targets;

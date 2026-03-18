@@ -38,7 +38,6 @@ import 'base.dart';
 final class PrCheckRuns extends AppDocument<PrCheckRuns> {
   static const kCollectionId = 'prCheckRuns';
   static const kPullRequestField = 'pull_request';
-  static const kPullRequestNumField = 'pull_request_num';
   static const kSlugField = 'slug';
   static const kShaField = 'sha';
 
@@ -78,14 +77,6 @@ final class PrCheckRuns extends AppDocument<PrCheckRuns> {
     fields[kPullRequestField] = json.encode(value.toJson()).toValue();
   }
 
-  /// The pull request number.
-  int get pullRequestNum =>
-      int.parse(fields[kPullRequestNumField]!.integerValue!);
-
-  set pullRequestNum(int value) {
-    fields[kPullRequestNumField] = value.toValue();
-  }
-
   /// The head sha at the time this document was created for testing.
   String get sha => fields[kShaField]!.stringValue!;
 
@@ -98,10 +89,7 @@ final class PrCheckRuns extends AppDocument<PrCheckRuns> {
   Map<String, String> get checkRuns {
     final checkRuns = <String, String>{};
     for (final MapEntry(:key, :value) in fields.entries) {
-      if (key == kPullRequestField ||
-          key == kPullRequestNumField ||
-          key == kSlugField ||
-          key == kShaField) {
+      if (key == kPullRequestField || key == kSlugField || key == kShaField) {
         continue;
       }
       checkRuns[key] = value.stringValue!;
@@ -126,7 +114,6 @@ final class PrCheckRuns extends AppDocument<PrCheckRuns> {
 
     final fields = <String, Value>{
       kPullRequestField: json.encode(pullRequest.toJson()).toValue(),
-      kPullRequestNumField: pullRequest.number!.toValue(),
       kSlugField: Value(
         stringValue: json.encode(pullRequest.head!.repo!.slug().toJson()),
       ),
@@ -202,7 +189,6 @@ final class PrCheckRuns extends AppDocument<PrCheckRuns> {
       return false;
     }
     prcr.pullRequest = pr;
-    prcr.pullRequestNum = pr.number!;
     await firestore.commit(tx, documentsToWrites([prcr]));
     return true;
   }
@@ -214,24 +200,5 @@ final class PrCheckRuns extends AppDocument<PrCheckRuns> {
   ) async {
     final prcr = await _findPrCheckRunsForSha(firestoreService, sha);
     return prcr?.pullRequest;
-  }
-
-  /// Retrieve the [PullRequest] for a given [pullRequestNum] or throw an error.
-  static Future<PullRequest?> findPullRequestForPullRequestNum(
-    FirestoreService firestoreService,
-    int pullRequestNum,
-  ) async {
-    final filterMap = <String, Object>{
-      '$kPullRequestNumField =': pullRequestNum,
-    };
-    log.info(
-      'findPullRequestForPullRequestNum($filterMap): finding prCheckRuns document',
-    );
-    final docs = await firestoreService.query(kCollectionId, filterMap);
-    log.info('findPullRequestForPullRequestNum($filterMap): found: $docs');
-    if (docs.isEmpty) {
-      return null;
-    }
-    return PrCheckRuns.fromDocument(docs.first).pullRequest;
   }
 }

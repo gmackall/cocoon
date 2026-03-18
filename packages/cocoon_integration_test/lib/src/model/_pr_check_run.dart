@@ -16,16 +16,6 @@ final class PrCheckRunsMatcher extends ModelMatcher<PrCheckRuns> {
     );
   }
 
-  PrCheckRunsMatcher hasPullRequestNum(Object? valueOrMatcher) {
-    return PrCheckRunsMatcher._(
-      _delegate.having(
-        (c) => c.pullRequestNum,
-        'pullRequestNum',
-        valueOrMatcher,
-      ),
-    );
-  }
-
   PrCheckRunsMatcher hasSha(Object? valueOrMatcher) {
     return PrCheckRunsMatcher._(
       _delegate.having((c) => c.sha, 'sha', valueOrMatcher),

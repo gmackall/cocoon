@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../dashboard_navigation_drawer.dart';
+import '../logic/task_sorting.dart';
 import '../state/presubmit.dart';
 import '../widgets/app_bar.dart';
 import '../widgets/guard_status.dart' as pw;
@@ -520,6 +521,47 @@ class _ChecksSidebar extends StatefulWidget {
 
 class _ChecksSidebarState extends State<_ChecksSidebar> {
   final ScrollController _scrollController = ScrollController();
+  late List<List<MapEntry<String, TaskStatus>>> _sortedBuildsPerStage;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateSortedBuilds();
+    _selectFirstCheck();
+  }
+
+  @override
+  void didUpdateWidget(_ChecksSidebar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.guardResponse != oldWidget.guardResponse) {
+      _updateSortedBuilds();
+    }
+    if (widget.selectedCheck == null) {
+      _selectFirstCheck();
+    }
+  }
+
+  void _selectFirstCheck() {
+    if (widget.selectedCheck != null) return;
+    for (final stage in _sortedBuildsPerStage) {
+      if (stage.isNotEmpty) {
+        final firstCheck = stage.first.key;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && widget.selectedCheck == null) {
+            widget.onCheckSelected(firstCheck);
+          }
+        });
+        break;
+      }
+    }
+  }
+
+  void _updateSortedBuilds() {
+    _sortedBuildsPerStage = widget.guardResponse.stages.map((stage) {
+      return stage.builds.entries.toList()
+        ..sort((a, b) => compareTasks(a.key, a.value, b.key, b.value));
+    }).toList();
+  }
 
   @override
   void dispose() {
@@ -545,6 +587,7 @@ class _ChecksSidebarState extends State<_ChecksSidebar> {
                 itemCount: widget.guardResponse.stages.length,
                 itemBuilder: (context, stageIndex) {
                   final stage = widget.guardResponse.stages[stageIndex];
+                  final sortedBuilds = _sortedBuildsPerStage[stageIndex];
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -567,7 +610,7 @@ class _ChecksSidebarState extends State<_ChecksSidebar> {
                           ),
                         ),
                       ),
-                      ...stage.builds.entries.map((entry) {
+                      ...sortedBuilds.map((entry) {
                         final isSelected = widget.selectedCheck == entry.key;
                         return _CheckItem(
                           name: entry.key,
@@ -616,7 +659,7 @@ class _CheckItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         decoration: BoxDecoration(
           color: isSelected
               ? (isDark
@@ -633,13 +676,13 @@ class _CheckItem extends StatelessWidget {
         child: Row(
           children: [
             _getStatusIcon(status),
-            const SizedBox(width: 12),
+            const SizedBox(width: 4),
             Expanded(
               child: Text(
                 name,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight: FontWeight.normal,
                   color: isSelected && !isDark ? const Color(0xFF1F2937) : null,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -660,6 +703,7 @@ class _CheckItem extends StatelessWidget {
                 icon: const Icon(Icons.refresh, size: 18),
                 label: const Text('Re-run'),
                 style: TextButton.styleFrom(
+                  minimumSize: const Size(64, 18),
                   foregroundColor: isDark
                       ? const Color(0xFF58A6FF)
                       : const Color(0xFF0969DA),

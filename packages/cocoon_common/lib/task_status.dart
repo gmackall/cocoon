@@ -55,15 +55,19 @@ enum TaskStatus {
   final String value;
 
   /// Whether the status represents a completed task reaching a terminal state.
-  bool get isComplete => _complete.contains(this);
-  static const _complete = {..._failed, succeeded, skipped};
+  bool get isComplete => isSuccess || isFailure;
 
   /// Whether the status represents a failure state.
-  bool get isFailure => _failed.contains(this);
-  static const _failed = {cancelled, infraFailure, failed};
+  bool get isFailure => switch (this) {
+    cancelled || infraFailure || failed => true,
+    _ => false,
+  };
 
   /// Whether the status represents a success state.
-  bool get isSuccess => this == succeeded;
+  bool get isSuccess => switch (this) {
+    succeeded || skipped || neutral => true,
+    _ => false,
+  };
 
   /// Whether the status represents a skipped state.
   bool get isSkipped => this == skipped;
@@ -72,21 +76,10 @@ enum TaskStatus {
   bool get isRunning => this == inProgress;
 
   /// Returns true if the build is waiting for backfill or in progress.
-  bool get isBuildInProgress =>
-      this == TaskStatus.waitingForBackfill || this == TaskStatus.inProgress;
-
-  /// Returns true if the build succeeded or was skipped.
-  bool get isBuildSuccessed =>
-      this == TaskStatus.succeeded || this == TaskStatus.skipped;
-
-  /// Returns true if the build failed, had an infra failure, or was cancelled.
-  bool get isBuildFailed =>
-      this == TaskStatus.failed ||
-      this == TaskStatus.infraFailure ||
-      this == TaskStatus.cancelled;
-
-  /// Returns true if the build succeeded or some kind of failure occurred.
-  bool get isBuildCompleted => isBuildSuccessed || isBuildFailed;
+  bool get isBuildInProgress => switch (this) {
+    waitingForBackfill || inProgress => true,
+    _ => false,
+  };
 
   /// Returns the JSON representation of `this`.
   Object? toJson() => value;

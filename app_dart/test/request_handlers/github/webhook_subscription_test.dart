@@ -87,6 +87,7 @@ void main() {
       githubOAuthTokenValue: 'githubOAuthKey',
       missingTestsPullRequestMessageValue: 'missingTestPullRequestMessage',
       releaseBranchPullRequestMessageValue: 'releaseBranchPullRequestMessage',
+      maxFilesChangedForSkippingEnginePhaseValue: 100,
       rollerAccountsValue: const <String>{
         'skia-flutter-autoroll',
         'engine-flutter-autoroll',
@@ -153,6 +154,7 @@ void main() {
       return CheckRun.fromJson(const <String, dynamic>{
         'id': 1,
         'started_at': '2020-05-10T02:49:31Z',
+        'name': 'test_name',
         'check_suite': <String, dynamic>{'id': 2},
       });
     });
@@ -408,6 +410,7 @@ void main() {
         number: issueNumber,
         baseRef: 'master',
         slug: Config.packagesSlug,
+        isOrgMember: false,
       );
 
       tester.message = pushMessage;
@@ -459,6 +462,7 @@ void main() {
         baseRef: 'master',
         slug: Config.packagesSlug,
         includeChanges: true,
+        isOrgMember: false,
       );
 
       tester.message = pushMessage;
@@ -531,6 +535,7 @@ void main() {
         action: 'opened',
         number: issueNumber,
         isDraft: true,
+        isOrgMember: false,
       );
 
       var batchRequestCalled = false;
@@ -2667,6 +2672,7 @@ void foo() {
       tester.message = generateGithubWebhookMessage(
         action: 'synchronize',
         number: issueNumber,
+        isOrgMember: false,
       );
 
       final mockRepositoriesService = MockRepositoriesService();
@@ -3691,20 +3697,39 @@ void foo() {
   });
 
   group('CICD label', () {
-    test('opened PR without CICD label does not schedule tests', () async {
-      tester.message = generateGithubWebhookMessage(
-        action: 'opened',
-        withCicdLabel: false,
-      );
+    test(
+      'opened PR without CICD label does schedule tests if author is MEMBER',
+      () async {
+        tester.message = generateGithubWebhookMessage(
+          action: 'opened',
+          withCicdLabel: false,
+          isOrgMember: true,
+        );
 
-      await tester.post(webhook);
-      expect(scheduler.triggerPresubmitTargetsCnt, 0);
-    });
+        await tester.post(webhook);
+        expect(scheduler.triggerPresubmitTargetsCnt, 1);
+      },
+    );
+
+    test(
+      'opened PR without CICD label does not schedule tests if author is not MEMBER',
+      () async {
+        tester.message = generateGithubWebhookMessage(
+          action: 'opened',
+          withCicdLabel: false,
+          isOrgMember: false,
+        );
+
+        await tester.post(webhook);
+        expect(scheduler.triggerPresubmitTargetsCnt, 0);
+      },
+    );
 
     test('opened PR with CICD label does not schedules tests', () async {
       tester.message = generateGithubWebhookMessage(
         action: 'opened',
         withCicdLabel: true,
+        isOrgMember: false,
       );
 
       await tester.post(webhook);
@@ -3796,6 +3821,7 @@ void foo() {
         tester.message = generateGithubWebhookMessage(
           action: 'synchronize',
           withCicdLabel: true,
+          isOrgMember: false,
         );
 
         await tester.post(webhook);

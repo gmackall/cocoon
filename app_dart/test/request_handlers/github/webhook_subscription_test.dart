@@ -87,7 +87,6 @@ void main() {
       githubOAuthTokenValue: 'githubOAuthKey',
       missingTestsPullRequestMessageValue: 'missingTestPullRequestMessage',
       releaseBranchPullRequestMessageValue: 'releaseBranchPullRequestMessage',
-      maxFilesChangedForSkippingEnginePhaseValue: 100,
       rollerAccountsValue: const <String>{
         'skia-flutter-autoroll',
         'engine-flutter-autoroll',
@@ -154,7 +153,6 @@ void main() {
       return CheckRun.fromJson(const <String, dynamic>{
         'id': 1,
         'started_at': '2020-05-10T02:49:31Z',
-        'name': 'test_name',
         'check_suite': <String, dynamic>{'id': 2},
       });
     });

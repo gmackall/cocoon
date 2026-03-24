@@ -3723,17 +3723,33 @@ void foo() {
       },
     );
 
-    test('opened PR with CICD label does not schedules tests', () async {
-      tester.message = generateGithubWebhookMessage(
-        action: 'opened',
-        withCicdLabel: true,
-        isOrgMember: false,
-      );
+    test(
+      'opened PR with CICD label does schedules tests if author is MEMBER',
+      () async {
+        tester.message = generateGithubWebhookMessage(
+          action: 'opened',
+          withCicdLabel: true,
+        );
 
-      await tester.post(webhook);
+        await tester.post(webhook);
 
-      expect(scheduler.triggerPresubmitTargetsCnt, 0);
-    });
+        expect(scheduler.triggerPresubmitTargetsCnt, 1);
+      },
+    );
+    test(
+      'opened PR with CICD label does not schedules tests if author is not MEMBER',
+      () async {
+        tester.message = generateGithubWebhookMessage(
+          action: 'opened',
+          withCicdLabel: true,
+          isOrgMember: false,
+        );
+
+        await tester.post(webhook);
+
+        expect(scheduler.triggerPresubmitTargetsCnt, 0);
+      },
+    );
 
     test(
       'labeled event with CICD label schedules tests on flutter/flutter',

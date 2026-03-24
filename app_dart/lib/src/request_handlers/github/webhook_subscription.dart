@@ -201,10 +201,18 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
       case 'edited':
         await _addCICDForRollers(pullRequestEvent);
         await _checkForTests(pullRequestEvent);
+        if (pullRequestEvent.changes != null &&
+            pullRequestEvent.changes!.base != null &&
+            _isOrgMember(pr)) {
+          await _scheduleIfMergeable(pullRequestEvent);
+        }
         break;
       case 'opened':
         await _addCICDForRollers(pullRequestEvent);
         await _checkForTests(pullRequestEvent);
+        if (_isOrgMember(pr)) {
+          await _scheduleIfMergeable(pullRequestEvent);
+        }
         await _tryReleaseApproval(pullRequestEvent);
         break;
       case 'reopened':
@@ -232,8 +240,12 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
       case 'dequeued':
         await _respondToPullRequestDequeued(pullRequestEvent);
         break;
-      // Ignore the rest of the events.
       case 'synchronize':
+        if (_isOrgMember(pr)) {
+          await _scheduleIfMergeable(pullRequestEvent);
+        }
+        break;
+      // Ignore the rest of the events.
       case 'ready_for_review':
       case 'unlabeled':
       case 'assigned':
@@ -245,6 +257,17 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
         break;
     }
     return Response.emptyOk;
+  }
+
+  /// Returns `true` if the PR author is a member or owner of the org that
+  /// owns the repository.
+  ///
+  /// This uses the `author_association` field from the GitHub webhook payload,
+  /// which avoids the need for an additional API call. The values `MEMBER` and
+  /// `OWNER` indicate the PR author belongs to the organization.
+  static bool _isOrgMember(PullRequest pr) {
+    final association = pr.authorAssociation;
+    return association == 'MEMBER' || association == 'OWNER';
   }
 
   Future<void> _processLabels(PullRequest pullRequest) async {

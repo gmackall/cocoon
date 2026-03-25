@@ -585,7 +585,9 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
     );
   }
 
-  Future<void> _addCICDForRollersAndMembers(PullRequestEvent pullRequestEvent) async {
+  Future<void> _addCICDForRollersAndMembers(
+    PullRequestEvent pullRequestEvent,
+  ) async {
     final pr = pullRequestEvent.pullRequest!;
     final slug = pr.base!.repo!.slug();
 

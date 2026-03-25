@@ -252,17 +252,6 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
     return Response.emptyOk;
   }
 
-  /// Returns `true` if the PR author is a member or owner of the org that
-  /// owns the repository.
-  ///
-  /// This uses the `author_association` field from the GitHub webhook payload,
-  /// which avoids the need for an additional API call. The values `MEMBER` and
-  /// `OWNER` indicate the PR author belongs to the organization.
-  static bool _isOrgMember(PullRequest pr) {
-    final association = pr.authorAssociation;
-    return association == 'MEMBER' || association == 'OWNER';
-  }
-
   Future<void> _processLabels(PullRequest pullRequest) async {
     final slug = pullRequest.base!.repo!.slug();
     final githubService = await config.createGithubService(slug);
@@ -591,8 +580,11 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
     final pr = pullRequestEvent.pullRequest!;
     final slug = pr.base!.repo!.slug();
 
-    if (config.supportedRepos.contains(slug) &&
-        (config.rollerAccounts.contains(pr.user!.login) || _isOrgMember(pr))) {
+    final isRoller = config.rollerAccounts.contains(pr.user!.login);
+    final association = pr.authorAssociation;
+    final isOrgMember = association == 'MEMBER' || association == 'OWNER';
+
+    if (config.supportedRepos.contains(slug) && (isRoller || isOrgMember)) {
       final gitHubClient = await config.createGitHubClient(pullRequest: pr);
       await gitHubClient.issues.addLabelsToIssue(slug, pr.number!, ['CICD']);
     }

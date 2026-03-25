@@ -3703,37 +3703,26 @@ void foo() {
   });
 
   group('CICD label', () {
-    test(
-      'opened PR without CICD label adds CICD label if author is MEMBER',
-      () async {
-        tester.message = generateGithubWebhookMessage(
-          action: 'opened',
-          withCicdLabel: false,
-          isOrgMember: true,
-        );
+    test('opened PR without CICD label does not schedule tests', () async {
+      tester.message = generateGithubWebhookMessage(
+        action: 'opened',
+        withCicdLabel: false,
+      );
 
-        await tester.post(webhook);
-        verify(
-          issuesService.addLabelsToIssue(Config.flutterSlug, 123, ['CICD']),
-        );
-      },
-    );
+      await tester.post(webhook);
+      expect(scheduler.triggerPresubmitTargetsCnt, 0);
+    });
 
-    test(
-      'opened PR without CICD label does not add CICD label if author is not MEMBER',
-      () async {
-        tester.message = generateGithubWebhookMessage(
-          action: 'opened',
-          withCicdLabel: false,
-          isOrgMember: false,
-        );
+    test('opened PR with CICD label does not schedules tests', () async {
+      tester.message = generateGithubWebhookMessage(
+        action: 'opened',
+        withCicdLabel: true,
+      );
 
-        await tester.post(webhook);
-        verifyNever(
-          issuesService.addLabelsToIssue(Config.flutterSlug, 123, any),
-        );
-      },
-    );
+      await tester.post(webhook);
+
+      expect(scheduler.triggerPresubmitTargetsCnt, 0);
+    });
 
     test(
       'opened PR with CICD label adds CICD label if author is MEMBER',

@@ -199,20 +199,15 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
         final result = await _processPullRequestClosed(pullRequestEvent);
         return result.toResponse();
       case 'edited':
-        await _addCICDForRollers(pullRequestEvent);
-        await _checkForTests(pullRequestEvent);
         if (pullRequestEvent.changes != null &&
-            pullRequestEvent.changes!.base != null &&
-            _isOrgMember(pr)) {
-          await _scheduleIfMergeable(pullRequestEvent);
+            pullRequestEvent.changes!.base != null) {
+          await _addCICDForRollersAndMembers(pullRequestEvent);
         }
+        await _checkForTests(pullRequestEvent);
         break;
       case 'opened':
-        await _addCICDForRollers(pullRequestEvent);
+        await _addCICDForRollersAndMembers(pullRequestEvent);
         await _checkForTests(pullRequestEvent);
-        if (_isOrgMember(pr)) {
-          await _scheduleIfMergeable(pullRequestEvent);
-        }
         await _tryReleaseApproval(pullRequestEvent);
         break;
       case 'reopened':
@@ -241,9 +236,7 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
         await _respondToPullRequestDequeued(pullRequestEvent);
         break;
       case 'synchronize':
-        if (_isOrgMember(pr)) {
-          await _scheduleIfMergeable(pullRequestEvent);
-        }
+        await _addCICDForRollersAndMembers(pullRequestEvent);
         break;
       // Ignore the rest of the events.
       case 'ready_for_review':
@@ -592,12 +585,12 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
     );
   }
 
-  Future<void> _addCICDForRollers(PullRequestEvent pullRequestEvent) async {
+  Future<void> _addCICDForRollersAndMembers(PullRequestEvent pullRequestEvent) async {
     final pr = pullRequestEvent.pullRequest!;
     final slug = pr.base!.repo!.slug();
 
-    if (config.rollerAccounts.contains(pr.user!.login) &&
-        config.supportedRepos.contains(slug)) {
+    if (config.supportedRepos.contains(slug) &&
+        (config.rollerAccounts.contains(pr.user!.login) || _isOrgMember(pr))) {
       final gitHubClient = await config.createGitHubClient(pullRequest: pr);
       await gitHubClient.issues.addLabelsToIssue(slug, pr.number!, ['CICD']);
     }

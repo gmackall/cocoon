@@ -938,6 +938,7 @@ void main() {
         const issueNumber = 123;
 
         tester.message = generateGithubWebhookMessage(
+          isOrgMember: false,
           action: 'opened',
           number: issueNumber,
         );
@@ -1067,6 +1068,7 @@ void main() {
       const issueNumber = 123;
 
       tester.message = generateGithubWebhookMessage(
+        isOrgMember: false,
         action: 'opened',
         number: issueNumber,
       );
@@ -1694,6 +1696,7 @@ void foo() {
         const issueNumber = 123;
 
         tester.message = generateGithubWebhookMessage(
+          isOrgMember: false,
           action: 'opened',
           number: issueNumber,
           baseRef: kReleaseBaseRef,
@@ -1832,6 +1835,7 @@ void foo() {
       const issueNumber = 123;
 
       tester.message = generateGithubWebhookMessage(
+        isOrgMember: false,
         action: 'opened',
         number: issueNumber,
         baseRef: 'master',
@@ -1868,6 +1872,7 @@ void foo() {
       const issueNumber = 123;
 
       tester.message = generateGithubWebhookMessage(
+        isOrgMember: false,
         action: 'opened',
         number: issueNumber,
         baseRef: 'master',
@@ -1904,6 +1909,7 @@ void foo() {
         const issueNumber = 123;
 
         tester.message = generateGithubWebhookMessage(
+          isOrgMember: false,
           action: 'opened',
           number: issueNumber,
           baseRef: 'master',
@@ -2334,6 +2340,7 @@ void foo() {
         const issueNumber = 123;
 
         tester.message = generateGithubWebhookMessage(
+          isOrgMember: false,
           action: 'opened',
           number: issueNumber,
           baseRef: kReleaseBaseRef,
@@ -2556,6 +2563,7 @@ void foo() {
       const issueNumber = 123;
 
       tester.message = generateGithubWebhookMessage(
+        isOrgMember: false,
         action: 'opened',
         number: issueNumber,
       );
@@ -3696,7 +3704,7 @@ void foo() {
 
   group('CICD label', () {
     test(
-      'opened PR without CICD label does schedule tests if author is MEMBER',
+      'opened PR without CICD label adds CICD label if author is MEMBER',
       () async {
         tester.message = generateGithubWebhookMessage(
           action: 'opened',
@@ -3705,12 +3713,14 @@ void foo() {
         );
 
         await tester.post(webhook);
-        expect(scheduler.triggerPresubmitTargetsCnt, 1);
+        verify(
+          issuesService.addLabelsToIssue(Config.flutterSlug, 123, ['CICD']),
+        );
       },
     );
 
     test(
-      'opened PR without CICD label does not schedule tests if author is not MEMBER',
+      'opened PR without CICD label does not add CICD label if author is not MEMBER',
       () async {
         tester.message = generateGithubWebhookMessage(
           action: 'opened',
@@ -3719,12 +3729,14 @@ void foo() {
         );
 
         await tester.post(webhook);
-        expect(scheduler.triggerPresubmitTargetsCnt, 0);
+        verifyNever(
+          issuesService.addLabelsToIssue(Config.flutterSlug, 123, any),
+        );
       },
     );
 
     test(
-      'opened PR with CICD label does schedules tests if author is MEMBER',
+      'opened PR with CICD label adds CICD label if author is MEMBER',
       () async {
         tester.message = generateGithubWebhookMessage(
           action: 'opened',
@@ -3733,11 +3745,13 @@ void foo() {
 
         await tester.post(webhook);
 
-        expect(scheduler.triggerPresubmitTargetsCnt, 1);
+        verify(
+          issuesService.addLabelsToIssue(Config.flutterSlug, 123, ['CICD']),
+        );
       },
     );
     test(
-      'opened PR with CICD label does not schedules tests if author is not MEMBER',
+      'opened PR with CICD label does not add CICD label if author is not MEMBER',
       () async {
         tester.message = generateGithubWebhookMessage(
           action: 'opened',
@@ -3747,7 +3761,9 @@ void foo() {
 
         await tester.post(webhook);
 
-        expect(scheduler.triggerPresubmitTargetsCnt, 0);
+        verifyNever(
+          issuesService.addLabelsToIssue(Config.flutterSlug, 123, any),
+        );
       },
     );
 

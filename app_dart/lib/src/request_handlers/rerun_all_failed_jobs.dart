@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:github/github.dart';
+import 'package:retry/retry.dart';
 
 import '../../cocoon_service.dart';
 import '../model/ci_yaml/target.dart';
@@ -72,15 +73,20 @@ final class RerunAllFailedJobs extends ApiRequestHandler {
       );
     }
 
-    final failedChecks = await UnifiedCheckRun.reInitializeFailedJobs(
-      firestoreService: _firestore,
-      slug: slug,
-      prNum: prNumber,
-      guardCheckRunId: guard.checkRunId,
+    // We're doing a transactional update, which could fail if multiple tasks
+    // are running at the same time so retry a sane amount of times before
+    // giving up.
+    final failedChecks = await const RetryOptions().retry(
+      () => UnifiedCheckRun.reInitializeFailedJobs(
+        firestoreService: _firestore,
+        slug: slug,
+        prNum: prNumber,
+        guardCheckRunId: guard.checkRunId,
+      ),
     );
 
     if (failedChecks == null) {
-      return Response.json({'message': 'No failed jobs found to re-run'});
+      throw const BadRequestException('No failed jobs found to re-run');
     }
 
     final (targets, artifacts) = await _scheduler.getAllTargetsForPullRequest(

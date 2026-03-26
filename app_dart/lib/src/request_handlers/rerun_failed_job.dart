@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:github/github.dart';
+import 'package:retry/retry.dart';
 
 import '../../cocoon_service.dart';
 import '../request_handling/api_request_handler.dart';
@@ -74,12 +75,17 @@ final class RerunFailedJob extends ApiRequestHandler {
       );
     }
 
-    final rerunInfo = await UnifiedCheckRun.reInitializeFailedJob(
-      firestoreService: _firestore,
-      slug: slug,
-      prNum: prNumber,
-      guardCheckRunId: guard.checkRunId,
-      jobName: jobName,
+    // We're doing a transactional update, which could fail if multiple tasks
+    // are running at the same time so retry a sane amount of times before
+    // giving up.
+    final rerunInfo = await const RetryOptions().retry(
+      () => UnifiedCheckRun.reInitializeFailedJob(
+        firestoreService: _firestore,
+        slug: slug,
+        prNum: prNumber,
+        guardCheckRunId: guard.checkRunId,
+        jobName: jobName,
+      ),
     );
 
     if (rerunInfo == null) {

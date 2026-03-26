@@ -581,8 +581,7 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
     final slug = pr.base!.repo!.slug();
 
     final isRoller = config.rollerAccounts.contains(pr.user!.login);
-    final association = pr.authorAssociation;
-    final isOrgMember = association == 'MEMBER' || association == 'OWNER';
+    final isOrgMember = pr.authorAssociation == 'MEMBER';
 
     if (config.supportedRepos.contains(slug) && (isRoller || isOrgMember)) {
       final gitHubClient = await config.createGitHubClient(pullRequest: pr);

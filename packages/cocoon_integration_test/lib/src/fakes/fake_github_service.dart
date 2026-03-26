@@ -65,6 +65,14 @@ class FakeGithubService implements GithubService {
   }
 
   @override
+  Future<bool> isTeamMember(String team, String user, String org) async {
+    if (user == 'test-flutter-hacker') {
+      return true;
+    }
+    return false;
+  }
+
+  @override
   Future<void> assignReviewer(
     RepositorySlug slug, {
     int? pullRequestNumber,

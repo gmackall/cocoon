@@ -579,11 +579,17 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
   ) async {
     final pr = pullRequestEvent.pullRequest!;
     final slug = pr.base!.repo!.slug();
+    final author = pr.user!.login!;
+    final githubService = await config.createGithubService(slug);
 
     final isRoller = config.rollerAccounts.contains(pr.user!.login);
-    final isOrgMember = pr.authorAssociation == 'MEMBER';
+    final isFlutterHacker = await githubService.isTeamMember(
+      'flutter-hackers',
+      author,
+      slug.owner,
+    );
 
-    if (config.supportedRepos.contains(slug) && (isRoller || isOrgMember)) {
+    if (config.supportedRepos.contains(slug) && (isRoller || isFlutterHacker)) {
       final gitHubClient = await config.createGitHubClient(pullRequest: pr);
       await gitHubClient.issues.addLabelsToIssue(slug, pr.number!, ['CICD']);
     }

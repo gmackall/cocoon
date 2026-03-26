@@ -30,7 +30,6 @@ PushMessage generateGithubWebhookMessage({
   bool withAutosubmit = false,
   bool withRevertOf = false,
   bool withCicdLabel = false,
-  bool isOrgMember = true,
   DateTime? closedAt,
   Iterable<String> additionalLabels = const [],
   Map<String, Object?>? labeledLabel,
@@ -55,7 +54,6 @@ PushMessage generateGithubWebhookMessage({
               withAutosubmit: withAutosubmit,
               withRevertOf: withRevertOf,
               withCicdLabel: withCicdLabel,
-              isOrgMember: isOrgMember,
               closedAt: closedAt,
               additionalLabels: additionalLabels,
               labeledLabel: labeledLabel,
@@ -83,7 +81,6 @@ String _generatePullRequestEvent(
   required bool withAutosubmit,
   required bool withRevertOf,
   bool withCicdLabel = false,
-  bool isOrgMember = true,
   Iterable<String> additionalLabels = const [],
   Map<String, Object?>? labeledLabel,
 }) {
@@ -466,7 +463,7 @@ String _generatePullRequestEvent(
         "href": "https://api.github.com/repos/${slug.fullName}/statuses/deadbeef"
       }
     },
-    "author_association": "${isOrgMember ? 'MEMBER' : 'CONTRIBUTOR'}",
+    "author_association": "MEMBER",
     "draft" : $isDraft,
     "merged": $merged,
     "mergeable": $isMergeable,

@@ -408,7 +408,6 @@ void main() {
         number: issueNumber,
         baseRef: 'master',
         slug: Config.packagesSlug,
-        isOrgMember: false,
       );
 
       tester.message = pushMessage;
@@ -460,7 +459,6 @@ void main() {
         baseRef: 'master',
         slug: Config.packagesSlug,
         includeChanges: true,
-        isOrgMember: false,
       );
 
       tester.message = pushMessage;
@@ -533,7 +531,6 @@ void main() {
         action: 'opened',
         number: issueNumber,
         isDraft: true,
-        isOrgMember: false,
       );
 
       var batchRequestCalled = false;
@@ -938,7 +935,6 @@ void main() {
         const issueNumber = 123;
 
         tester.message = generateGithubWebhookMessage(
-          isOrgMember: false,
           action: 'opened',
           number: issueNumber,
         );
@@ -1068,7 +1064,6 @@ void main() {
       const issueNumber = 123;
 
       tester.message = generateGithubWebhookMessage(
-        isOrgMember: false,
         action: 'opened',
         number: issueNumber,
       );
@@ -1696,7 +1691,6 @@ void foo() {
         const issueNumber = 123;
 
         tester.message = generateGithubWebhookMessage(
-          isOrgMember: false,
           action: 'opened',
           number: issueNumber,
           baseRef: kReleaseBaseRef,
@@ -1835,7 +1829,6 @@ void foo() {
       const issueNumber = 123;
 
       tester.message = generateGithubWebhookMessage(
-        isOrgMember: false,
         action: 'opened',
         number: issueNumber,
         baseRef: 'master',
@@ -1872,7 +1865,6 @@ void foo() {
       const issueNumber = 123;
 
       tester.message = generateGithubWebhookMessage(
-        isOrgMember: false,
         action: 'opened',
         number: issueNumber,
         baseRef: 'master',
@@ -1909,7 +1901,6 @@ void foo() {
         const issueNumber = 123;
 
         tester.message = generateGithubWebhookMessage(
-          isOrgMember: false,
           action: 'opened',
           number: issueNumber,
           baseRef: 'master',
@@ -2340,7 +2331,6 @@ void foo() {
         const issueNumber = 123;
 
         tester.message = generateGithubWebhookMessage(
-          isOrgMember: false,
           action: 'opened',
           number: issueNumber,
           baseRef: kReleaseBaseRef,
@@ -2563,7 +2553,6 @@ void foo() {
       const issueNumber = 123;
 
       tester.message = generateGithubWebhookMessage(
-        isOrgMember: false,
         action: 'opened',
         number: issueNumber,
       );
@@ -2678,7 +2667,6 @@ void foo() {
       tester.message = generateGithubWebhookMessage(
         action: 'synchronize',
         number: issueNumber,
-        isOrgMember: false,
       );
 
       final mockRepositoriesService = MockRepositoriesService();
@@ -3724,23 +3712,33 @@ void foo() {
       expect(scheduler.triggerPresubmitTargetsCnt, 0);
     });
 
-    test('opened PR with adds CICD label if author is MEMBER', () async {
-      tester.message = generateGithubWebhookMessage(action: 'opened');
+    test(
+      'opened PR with adds CICD label if author is member of flutter-hackers',
+      () async {
+        tester.message = generateGithubWebhookMessage(
+          action: 'opened',
+          login: 'test-flutter-hacker',
+        );
 
-      await tester.post(webhook);
+        await tester.post(webhook);
 
-      verify(issuesService.addLabelsToIssue(Config.flutterSlug, 123, ['CICD']));
-    });
-    test('opened PR does not add CICD label if author is not MEMBER', () async {
-      tester.message = generateGithubWebhookMessage(
-        action: 'opened',
-        isOrgMember: false,
-      );
+        verify(
+          issuesService.addLabelsToIssue(Config.flutterSlug, 123, ['CICD']),
+        );
+      },
+    );
+    test(
+      'opened PR does not add CICD label if author is not member of flutter-hackers',
+      () async {
+        tester.message = generateGithubWebhookMessage(action: 'opened');
 
-      await tester.post(webhook);
+        await tester.post(webhook);
 
-      verifyNever(issuesService.addLabelsToIssue(Config.flutterSlug, 123, any));
-    });
+        verifyNever(
+          issuesService.addLabelsToIssue(Config.flutterSlug, 123, any),
+        );
+      },
+    );
 
     test(
       'labeled event with CICD label schedules tests on flutter/flutter',
@@ -3826,7 +3824,6 @@ void foo() {
         tester.message = generateGithubWebhookMessage(
           action: 'synchronize',
           withCicdLabel: true,
-          isOrgMember: false,
         );
 
         await tester.post(webhook);
@@ -3834,22 +3831,24 @@ void foo() {
       },
     );
 
-    test('synchronize event adds CICD label if author is member', () async {
-      tester.message = generateGithubWebhookMessage(
-        action: 'synchronize',
-        isOrgMember: true,
-      );
-
-      await tester.post(webhook);
-      verify(issuesService.addLabelsToIssue(Config.flutterSlug, 123, ['CICD']));
-    });
     test(
-      'synchronize event does not add CICD label if author is not member',
+      'synchronize event adds CICD label if author is member of flutter-hackers',
       () async {
         tester.message = generateGithubWebhookMessage(
           action: 'synchronize',
-          isOrgMember: false,
+          login: 'test-flutter-hacker',
         );
+
+        await tester.post(webhook);
+        verify(
+          issuesService.addLabelsToIssue(Config.flutterSlug, 123, ['CICD']),
+        );
+      },
+    );
+    test(
+      'synchronize event does not add CICD label if author is not member of flutter-hackers',
+      () async {
+        tester.message = generateGithubWebhookMessage(action: 'synchronize');
 
         await tester.post(webhook);
         verifyNever(

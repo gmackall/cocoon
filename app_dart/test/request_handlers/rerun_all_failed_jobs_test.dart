@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:convert';
-
 import 'package:cocoon_common/task_status.dart';
 import 'package:cocoon_integration_test/testing.dart';
 import 'package:cocoon_server_test/test_logging.dart';
 import 'package:cocoon_service/cocoon_service.dart';
 import 'package:cocoon_service/src/model/ci_yaml/target.dart';
 import 'package:cocoon_service/src/request_handlers/rerun_all_failed_jobs.dart';
+import 'package:cocoon_service/src/request_handling/exceptions.dart';
 import 'package:cocoon_service/src/service/luci_build_service/engine_artifacts.dart';
 import 'package:github/github.dart';
 import 'package:mockito/mockito.dart';
@@ -57,8 +56,8 @@ void main() {
     final checkRun = generateCheckRun(1, name: 'Guard');
     final guard = generatePresubmitGuard(
       checkRun: checkRun,
-      builds: {'Linux A': TaskStatus.failed, 'Linux B': TaskStatus.succeeded},
-      remainingBuilds: 0,
+      jobs: {'Linux A': TaskStatus.failed, 'Linux B': TaskStatus.succeeded},
+      remainingJobs: 0,
     );
     firestore.putDocument(guard);
 
@@ -72,10 +71,10 @@ void main() {
       ],
     );
 
-    final failedCheck = PresubmitCheck(
+    final failedCheck = PresubmitJob(
       slug: Config.flutterSlug,
       checkRunId: 1,
-      buildName: 'Linux A',
+      jobName: 'Linux A',
       status: TaskStatus.failed,
       attemptNumber: 1,
       creationTime: 1,
@@ -122,15 +121,15 @@ void main() {
     final updatedGuard = PresubmitGuard.fromDocument(
       await firestore.getDocument(guard.name!),
     );
-    expect(updatedGuard.builds['Linux A'], TaskStatus.waitingForBackfill);
+    expect(updatedGuard.jobs['Linux A'], TaskStatus.waitingForBackfill);
   });
 
   test('Re-run all failed jobs successful with default owner/repo', () async {
     final checkRun = generateCheckRun(1, name: 'Guard');
     final guard = generatePresubmitGuard(
       checkRun: checkRun,
-      builds: {'Linux A': TaskStatus.failed},
-      remainingBuilds: 0,
+      jobs: {'Linux A': TaskStatus.failed},
+      remainingJobs: 0,
     );
     firestore.putDocument(guard);
 
@@ -144,10 +143,10 @@ void main() {
       ],
     );
 
-    final failedCheck = PresubmitCheck(
+    final failedCheck = PresubmitJob(
       slug: Config.flutterSlug,
       checkRunId: 1,
-      buildName: 'Linux A',
+      jobName: 'Linux A',
       status: TaskStatus.failed,
       attemptNumber: 1,
       creationTime: 1,
@@ -177,11 +176,11 @@ void main() {
     expect(response.statusCode, HttpStatus.ok);
   });
 
-  test('Re-run all failed jobs - no failures', () async {
+  test('Re-run all failed jobs - bad request', () async {
     final checkRun = generateCheckRun(1, name: 'Guard');
     final guard = generatePresubmitGuard(
       checkRun: checkRun,
-      builds: {'Linux A': TaskStatus.succeeded},
+      jobs: {'Linux A': TaskStatus.succeeded},
     );
     firestore.putDocument(guard);
 
@@ -198,14 +197,13 @@ void main() {
     tester.requestData = {
       'owner': 'flutter',
       'repo': 'flutter',
-      'pr': guard.pullRequestId,
+      'pr': guard.prNum,
     };
 
-    final response = await tester.post(handler);
-    final bodyString = await utf8.decoder.bind(response.body).join();
-    final body = jsonDecode(bodyString) as Map<String, dynamic>;
-
-    expect(body['message'], contains('No failed jobs found'));
+    await expectLater(
+      tester.post(handler),
+      throwsA(isA<BadRequestException>()),
+    );
   });
 }
 

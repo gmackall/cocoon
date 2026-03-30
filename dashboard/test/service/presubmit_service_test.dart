@@ -59,14 +59,14 @@ void main() {
     });
   });
 
-  group('AppEngine CocoonService fetchPresubmitCheckDetails', () {
+  group('AppEngine CocoonService fetchPresubmitJobDetails', () {
     late AppEngineCocoonService service;
 
-    test('should return expected List<PresubmitCheckResponse>', () async {
+    test('should return expected List<PresubmitJobResponse>', () async {
       final checkData = [
         {
           'attempt_number': 1,
-          'build_name': 'test1',
+          'job_name': 'test1',
           'creation_time': 123456789,
           'status': 'Succeeded',
           'summary': 'Passed',
@@ -75,19 +75,19 @@ void main() {
 
       service = AppEngineCocoonService(
         client: MockClient((Request request) async {
-          expect(request.url.path, '/api/public/get-presubmit-checks');
+          expect(request.url.path, '/api/public/get-presubmit-jobs');
           return Response(jsonEncode(checkData), 200);
         }),
       );
 
-      final response = await service.fetchPresubmitCheckDetails(
+      final response = await service.fetchPresubmitJobDetails(
         checkRunId: 456,
-        buildName: 'test1',
+        jobName: 'test1',
       );
 
       expect(response.error, isNull);
       expect(response.data!.length, 1);
-      expect(response.data!.first.buildName, 'test1');
+      expect(response.data!.first.jobName, 'test1');
     });
   });
 
@@ -97,7 +97,7 @@ void main() {
     test('should return expected List<PresubmitGuardSummary>', () async {
       final summaryData = [
         {
-          'commit_sha': 'sha1',
+          'head_sha': 'sha1',
           'creation_time': 123456789,
           'guard_status': 'Succeeded',
         },
@@ -117,7 +117,7 @@ void main() {
 
       expect(response.error, isNull);
       expect(response.data!.length, 1);
-      expect(response.data!.first.commitSha, 'sha1');
+      expect(response.data!.first.headSha, 'sha1');
     });
   });
   group('AppEngine CocoonService presubmit methods', () {
@@ -148,20 +148,20 @@ void main() {
     });
 
     test(
-      'fetchPresubmitCheckDetails uses correct parameters and defaults',
+      'fetchPresubmitJobDetails uses correct parameters and defaults',
       () async {
-        await service.fetchPresubmitCheckDetails(
+        await service.fetchPresubmitJobDetails(
           checkRunId: 123,
-          buildName: 'linux',
+          jobName: 'linux',
         );
         expect(capturedUri.queryParameters['owner'], 'flutter');
         expect(capturedUri.queryParameters['repo'], 'flutter');
         expect(capturedUri.queryParameters['check_run_id'], '123');
-        expect(capturedUri.queryParameters['build_name'], 'linux');
+        expect(capturedUri.queryParameters['job_name'], 'linux');
 
-        await service.fetchPresubmitCheckDetails(
+        await service.fetchPresubmitJobDetails(
           checkRunId: 123,
-          buildName: 'linux',
+          jobName: 'linux',
           repo: 'cocoon',
           owner: 'custom',
         );

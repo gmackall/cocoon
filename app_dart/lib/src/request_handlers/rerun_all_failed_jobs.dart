@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:github/github.dart';
+import 'package:retry/retry.dart';
 
 import '../../cocoon_service.dart';
 import '../model/ci_yaml/target.dart';
@@ -50,10 +51,10 @@ final class RerunAllFailedJobs extends ApiRequestHandler {
 
     final slug = RepositorySlug(owner, repo);
 
-    final guard = await UnifiedCheckRun.getLatestPresubmitGuardByPullRequestNum(
+    final guard = await UnifiedCheckRun.getLatestPresubmitGuardForPrNum(
       firestoreService: _firestore,
       slug: slug,
-      pullRequestNum: prNumber,
+      prNum: prNumber,
     );
     if (guard == null) {
       throw NotFoundException('No PresubmitGuard found for PR $slug/$prNumber');
@@ -72,15 +73,20 @@ final class RerunAllFailedJobs extends ApiRequestHandler {
       );
     }
 
-    final failedChecks = await UnifiedCheckRun.reInitializeFailedChecks(
-      firestoreService: _firestore,
-      slug: slug,
-      pullRequestId: prNumber,
-      guardCheckRunId: guard.checkRunId,
+    // We're doing a transactional update, which could fail if multiple tasks
+    // are running at the same time so retry a sane amount of times before
+    // giving up.
+    final failedChecks = await const RetryOptions().retry(
+      () => UnifiedCheckRun.reInitializeFailedJobs(
+        firestoreService: _firestore,
+        slug: slug,
+        prNum: prNumber,
+        guardCheckRunId: guard.checkRunId,
+      ),
     );
 
     if (failedChecks == null) {
-      return Response.json({'message': 'No failed jobs found to re-run'});
+      throw const BadRequestException('No failed jobs found to re-run');
     }
 
     final (targets, artifacts) = await _scheduler.getAllTargetsForPullRequest(
@@ -90,12 +96,12 @@ final class RerunAllFailedJobs extends ApiRequestHandler {
 
     final checkRetries = <Target, int>{};
     for (final target in targets) {
-      if (failedChecks.checkRetries.containsKey(target.name)) {
-        checkRetries[target] = failedChecks.checkRetries[target.name]!;
+      if (failedChecks.jobRetries.containsKey(target.name)) {
+        checkRetries[target] = failedChecks.jobRetries[target.name]!;
       }
     }
 
-    if (checkRetries.length != failedChecks.checkRetries.length) {
+    if (checkRetries.length != failedChecks.jobRetries.length) {
       throw const NotFoundException(
         'Failed to find all failed targets in presubmit targets',
       );

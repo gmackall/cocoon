@@ -336,6 +336,10 @@ class PresubmitState extends ChangeNotifier {
       _lastFetchedSha = null;
       _jobs = null;
       _selectedJob = null;
+      // Reset to force re-fetch of available SHAs and pick the latest one
+      if (sha == null) {
+        _lastFetchedPr = null;
+      }
     }
 
     if (changed) {

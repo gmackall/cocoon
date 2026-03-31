@@ -3716,6 +3716,34 @@ void foo() {
     });
 
     test(
+      'opened PR with adds CICD label if author is member of flutter-hackers',
+      () async {
+        tester.message = generateGithubWebhookMessage(
+          action: 'opened',
+          login: 'test-flutter-hacker',
+        );
+
+        await tester.post(webhook);
+
+        verify(
+          issuesService.addLabelsToIssue(Config.flutterSlug, 123, ['CICD']),
+        );
+      },
+    );
+    test(
+      'opened PR does not add CICD label if author is not member of flutter-hackers',
+      () async {
+        tester.message = generateGithubWebhookMessage(action: 'opened');
+
+        await tester.post(webhook);
+
+        verifyNever(
+          issuesService.addLabelsToIssue(Config.flutterSlug, 123, any),
+        );
+      },
+    );
+
+    test(
       'labeled event with CICD label schedules tests on flutter/flutter',
       () async {
         tester.message = generateGithubWebhookMessage(
@@ -3803,6 +3831,32 @@ void foo() {
 
         await tester.post(webhook);
         expect(scheduler.triggerPresubmitTargetsCnt, 0);
+      },
+    );
+
+    test(
+      'synchronize event adds CICD label if author is member of flutter-hackers',
+      () async {
+        tester.message = generateGithubWebhookMessage(
+          action: 'synchronize',
+          login: 'test-flutter-hacker',
+        );
+
+        await tester.post(webhook);
+        verify(
+          issuesService.addLabelsToIssue(Config.flutterSlug, 123, ['CICD']),
+        );
+      },
+    );
+    test(
+      'synchronize event does not add CICD label if author is not member of flutter-hackers',
+      () async {
+        tester.message = generateGithubWebhookMessage(action: 'synchronize');
+
+        await tester.post(webhook);
+        verifyNever(
+          issuesService.addLabelsToIssue(Config.flutterSlug, 123, any),
+        );
       },
     );
   });

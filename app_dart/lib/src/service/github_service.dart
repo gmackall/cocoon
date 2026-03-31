@@ -113,6 +113,20 @@ class GithubService {
         .toList();
   }
 
+  /// Check to see if user is a member of team in org.
+  ///
+  /// Note that we catch here as the api returns a 404 if the user has no
+  /// membership in general or is not a member of the team.
+  Future<bool> isTeamMember(String team, String user, String org) async {
+    try {
+      final teamMembershipState = await github.organizations
+          .getTeamMembershipByName(org, team, user);
+      return teamMembershipState.isActive;
+    } on GitHubError {
+      return false;
+    }
+  }
+
   /// Creates a pull request against the `baseRef` in the `slug` repository.
   ///
   /// The `entries` contains the file changes in the created pull request. This

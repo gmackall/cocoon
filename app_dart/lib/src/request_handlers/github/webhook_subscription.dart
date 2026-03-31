@@ -199,11 +199,14 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
         final result = await _processPullRequestClosed(pullRequestEvent);
         return result.toResponse();
       case 'edited':
-        await _addCICDForRollers(pullRequestEvent);
+        if (pullRequestEvent.changes != null &&
+            pullRequestEvent.changes!.base != null) {
+          await _addCICDForRollersAndMembers(pullRequestEvent);
+        }
         await _checkForTests(pullRequestEvent);
         break;
       case 'opened':
-        await _addCICDForRollers(pullRequestEvent);
+        await _addCICDForRollersAndMembers(pullRequestEvent);
         await _checkForTests(pullRequestEvent);
         await _tryReleaseApproval(pullRequestEvent);
         break;
@@ -232,8 +235,10 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
       case 'dequeued':
         await _respondToPullRequestDequeued(pullRequestEvent);
         break;
-      // Ignore the rest of the events.
       case 'synchronize':
+        await _addCICDForRollersAndMembers(pullRequestEvent);
+        break;
+      // Ignore the rest of the events.
       case 'ready_for_review':
       case 'unlabeled':
       case 'assigned':
@@ -569,12 +574,22 @@ final class GithubWebhookSubscription extends SubscriptionHandler {
     );
   }
 
-  Future<void> _addCICDForRollers(PullRequestEvent pullRequestEvent) async {
+  Future<void> _addCICDForRollersAndMembers(
+    PullRequestEvent pullRequestEvent,
+  ) async {
     final pr = pullRequestEvent.pullRequest!;
     final slug = pr.base!.repo!.slug();
+    final author = pr.user!.login!;
+    final githubService = await config.createGithubService(slug);
 
-    if (config.rollerAccounts.contains(pr.user!.login) &&
-        config.supportedRepos.contains(slug)) {
+    final isRoller = config.rollerAccounts.contains(pr.user!.login);
+    final isFlutterHacker = await githubService.isTeamMember(
+      'flutter-hackers',
+      author,
+      slug.owner,
+    );
+
+    if (config.supportedRepos.contains(slug) && (isRoller || isFlutterHacker)) {
       final gitHubClient = await config.createGitHubClient(pullRequest: pr);
       await gitHubClient.issues.addLabelsToIssue(slug, pr.number!, ['CICD']);
     }

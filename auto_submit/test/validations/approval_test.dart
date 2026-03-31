@@ -389,5 +389,41 @@ void main() {
         isTrue,
       );
     });
+    test(
+      'pullRequestApprovalRequirementsMessage takes approval_group from config',
+      () async {
+        config.repositoryConfigurationMock = RepositoryConfiguration.fromYaml(
+          '''
+        default_branch: main
+        allow_config_override: false
+        auto_approval_accounts:
+          - dependabot[bot]
+          - dependabot
+          - DartDevtoolWorkflowBot
+        approving_reviews: 2
+        approval_group: custom-group
+        run_ci: true
+        support_no_review_revert: true
+        required_checkruns_on_revert:
+          - ci.yaml validation
+      ''',
+        );
+        approval = Approval(config: config);
+
+        githubService.isTeamMemberMockMap['author1'] = false;
+        githubService.isTeamMemberMockMap['keyonghan'] = false;
+        final review = constructSingleReviewerReview(reviewState: 'APPROVED');
+
+        final result = await computeValidationResult(review);
+
+        expect(result.result, isFalse);
+        expect(
+          result.message.contains(
+            'part of custom-group or two member reviews if the author is not a member of custom-group',
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 }

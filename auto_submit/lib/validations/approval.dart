@@ -89,7 +89,7 @@ class Approval extends Validation {
 
       message = approved
           ? approvedMessage
-          : '$approvedMessage\n${Config.pullRequestApprovalRequirementsMessage}';
+          : '$approvedMessage\n${Config.pullRequestApprovalRequirementsMessage(repositoryConfiguration.approvalGroup)}';
     }
 
     return ValidationResult(approved, action, message);

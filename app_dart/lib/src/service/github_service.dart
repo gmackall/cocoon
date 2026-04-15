@@ -126,7 +126,9 @@ class GithubService {
       );
       return teamMembershipState.isActive;
     } on GitHubError catch (e) {
-      log.debug('Failed to check team membership: $e');
+      log.debug(
+        'Failed to check team membership for team $team and user $user, org $org: $e',
+      );
       return false;
     }
   }

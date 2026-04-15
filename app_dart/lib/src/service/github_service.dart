@@ -121,7 +121,9 @@ class GithubService {
     try {
       final teamMembershipState = await github.organizations
           .getTeamMembershipByName(org, team, user);
-      log.debug('Team membership state: $teamMembershipState');
+      log.debug(
+        'Team membership state for team $team and user $user, org $org: $teamMembershipState',
+      );
       return teamMembershipState.isActive;
     } on GitHubError catch (e) {
       log.debug('Failed to check team membership: $e');

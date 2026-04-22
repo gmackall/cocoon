@@ -519,6 +519,17 @@ class PresubmitState extends ChangeNotifier {
         false;
   }
 
+  void resume() {
+    if (!_active) return;
+    _startTimer();
+    _fetchRefreshUpdate();
+  }
+
+  void pause() {
+    refreshTimer?.cancel();
+    refreshTimer = null;
+  }
+
   void _fetchRefreshUpdate() {
     if (!_active) return;
     fetchIfNeeded();
